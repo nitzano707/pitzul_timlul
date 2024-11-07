@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <title>חלוקת תמלול לפי דוברים</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f9f9f9;
+            color: #333;
+            direction: rtl;
+        }
+        textarea, #result {
+            width: 80%;
+            margin: 10px auto;
+            padding: 10px;
+            font-size: 16px;
+        }
+        textarea {
+            height: 150px;
+            resize: vertical;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #result {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <h1>פענוח דוברים בתמלול</h1>
+    <textarea id="transcriptionInput" placeholder="הדבק כאן את טקסט התמלול"></textarea><br>
+    <button onclick="processTranscription()">פענח לפי דוברים</button>
+    <div id="result">תוצאה תוצג כאן</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/groq-sdk"></script>
+    <script>
+        async function processTranscription() {
+            const transcriptionText = document.getElementById("transcriptionInput").value;
+            if (!transcriptionText) {
+                alert("אנא הדבק טקסט תמלול");
+                return;
+            }
+
+            const segments = splitTextIntoSegments(transcriptionText);
+            const apiKey = "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";
+            const groq = new Groq(apiKey);
+            let fullResult = "";
+
+            for (const segment of segments) {
+                const prompt = `אנא קרא את פסקת הטקסט הבאה מתוך תמלול של ראיון.אם ניתן להבין מתוך התוכן וההקשר שזהו דובר אחד, הצג את הפסקה בדיוק כפי שהיא, מילה במילה, ללא כל שינוי. אם לעומת זאת ניתן לזהות שיש שני דוברים שונים בפסקה, אנא פצל אותה כך שכל חלק יופיע בנפרד עם ריווח בין החלקים. לפני החלק הראשון כתוב 'דובר 1' ולפני החלק השני כתוב 'דובר 2'.':\n\n${segment}`;
+                try {
+                    const chatCompletion = await groq.chat.completions.create({
+                        "messages": [
+                            { "role": "user", "content": prompt }
+                        ],
+                        "model": "llama3-8b-8192",
+                        "temperature": 1,
+                        "max_tokens": 1024,
+                        "top_p": 1,
+                        "stream": false,
+                    });
+
+                    const result = chatCompletion.choices[0]?.message?.content || '';
+                    fullResult += result + "\n\n"; // איחוד התוצאה הכוללת
+                } catch (error) {
+                    console.error("Error with segment:", error);
+                }
+            }
+
+            document.getElementById("result").textContent = fullResult || "שגיאה בתהליך הפענוח";
+        }
+
+        function splitTextIntoSegments(text, maxChars = 500, maxSentences = 5) {
+            const segments = [];
+            let currentSegment = "";
+            let sentenceCount = 0;
+
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+
+            for (let sentence of sentences) {
+                if ((currentSegment.length + sentence.length > maxChars) || sentenceCount >= maxSentences) {
+                    segments.push(currentSegment.trim());
+                    currentSegment = "";
+                    sentenceCount = 0;
+                }
+
+                currentSegment += sentence + " ";
+                sentenceCount++;
+            }
+
+            if (currentSegment.trim()) {
+                segments.push(currentSegment.trim());
+            }
+
+            return segments;
+        }
+    </script>
+</body>
+</html>
