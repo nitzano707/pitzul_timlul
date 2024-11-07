@@ -87,8 +87,8 @@
                             body: JSON.stringify({
                                 model: "llama3-70b-8192",
                                 messages: [
-                                    {role: "system", content: `אתה עוזר מועיל שמפצל תמלולים לפי הדוברים "מראיין" ו-"${intervieweeName}"`},
-                                    {role: "user", content: prompt }
+                                   {role: "system", content: `אתה עוזר שמפענח תמלולים ומבצע חלוקה ברורה לפי דוברים. תפקידך הוא להבחין בין דברי המראיין לבין דברי המרואיין, ${intervieweeName}, תוך שימוש בתוויות 'מראיין' ו-'${intervieweeName}' לפני כל חלק רלוונטי. דאג לשמור על מבנה עקבי כך שכל דובר מזוהה בבירור.`},
+                                   {role: "user", content: prompt }
                                 ],
                                 max_tokens: 1024,
                                 temperature: 1
