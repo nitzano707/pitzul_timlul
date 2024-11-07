@@ -36,6 +36,7 @@
             border-radius: 10px;
             margin-top: 20px;
             text-align: right;
+            white-space: pre-wrap;
         }
     </style>
 </head>
@@ -46,6 +47,13 @@
     <div id="result">תוצאה תוצג כאן</div>
 
     <script>
+        const apiKeys = [
+            "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",
+            "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",
+            "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"
+        ];
+        let apiKeyIndex = 0;
+
         async function processTranscription() {
             const transcriptionText = document.getElementById("transcriptionInput").value;
             if (!transcriptionText) {
@@ -54,8 +62,8 @@
             }
 
             const segments = splitTextIntoSegments(transcriptionText);
-            const apiKey = "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";
             let fullResult = "";
+            document.getElementById("result").textContent = "מתחיל בעיבוד התמלול...\n\n";
 
             for (const segment of segments) {
                 const prompt = `אנא קרא את פסקת הטקסט הבאה מתוך תמלול של ראיון.אם ניתן להבין מתוך התוכן וההקשר שזהו דובר אחד, הצג את הפסקה בדיוק כפי שהיא, מילה במילה, ללא כל שינוי. אם לעומת זאת ניתן לזהות שיש שני דוברים שונים בפסקה, אנא פצל אותה כך שכל חלק יופיע בנפרד עם ריווח בין החלקים. לפני החלק הראשון כתוב 'דובר 1' ולפני החלק השני כתוב 'דובר 2'.':\n\n${segment}`;
@@ -63,7 +71,7 @@
                     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                         method: "POST",
                         headers: {
-                            "Authorization": `Bearer ${apiKey}`,
+                            "Authorization": `Bearer ${apiKeys[apiKeyIndex]}`,
                             "Content-Type": "application/json"
                         },
                         body: JSON.stringify({
@@ -79,15 +87,26 @@
 
                     if (!response.ok) {
                         const errorText = await response.text();
+                        console.error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                        if (response.status === 429) { // מגבלת שימוש
+                            apiKeyIndex = (apiKeyIndex + 1) % apiKeys.length; // מעבר למפתח API הבא
+                            await new Promise(resolve => setTimeout(resolve, 200)); // המתנה של 0.2 שניות
+                            continue; // לנסות שוב עם ה-API הבא
+                        }
                         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
                     }
 
                     const data = await response.json();
                     const result = data.choices[0]?.message?.content || '';
                     fullResult += result + "\n\n"; // איחוד התוצאה הכוללת
+                    document.getElementById("result").textContent = fullResult; // עדכון התוצאה על המסך
+
                 } catch (error) {
                     console.error("Error with segment:", error);
                 }
+
+                // המתנה של 2 שניות בין קריאות כדי למנוע עומס על השרת
+                await new Promise(resolve => setTimeout(resolve, 2000));
             }
 
             document.getElementById("result").textContent = fullResult || "שגיאה בתהליך הפענוח";
